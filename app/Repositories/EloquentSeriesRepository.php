@@ -11,12 +11,12 @@ use App\Http\Requests\SeriesFormRequest;
 class EloquentSeriesRepository implements SeriesRepository
 {
 
-    public function add(SeriesFormRequest $request): Series
+    public function add(array $data): Series
     {
-        return DB::transaction(function () use ($request) {
+        return DB::transaction(function () use ($data) {
 
 
-            $serie = Series::create($request->all());
+            $serie = Series::create($data);
 
 
 
@@ -35,7 +35,7 @@ class EloquentSeriesRepository implements SeriesRepository
         */
 
             $seasons = [];
-            for ($i = 1; $i <= $request->seasonsQty; $i++) {
+            for ($i = 1; $i <= $data['seasonsQty']; $i++) {
                 $seasons[] = [
                     'series_id' => $serie->id,
                     'number' => $i,
@@ -43,9 +43,11 @@ class EloquentSeriesRepository implements SeriesRepository
             }
             Season::insert($seasons);
 
+            $serie->load('seasons'); // Garante que as temporadas estão carregadas após a inserção 
+        
             $episodes = [];
             foreach ($serie->seasons as $season) {
-                for ($j = 1; $j <= $request->episodesPerSeason; $j++) {
+                for ($j = 1; $j <= $data['episodesPerSeason']; $j++) {
                     $episodes[] = [
                         'season_id' => $season->id,
                         'number' => $j

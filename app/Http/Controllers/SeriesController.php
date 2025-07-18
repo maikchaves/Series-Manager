@@ -4,18 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Http\Middleware\Autenticador;
 use App\Http\Requests\SeriesFormRequest;
+use App\Mail\SeriesCreated;
 use App\Models\Episode;
 use App\Models\Season;
 use App\Models\Series;
+use App\Models\User;
 use App\Repositories\EloquentSeriesRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Repositories\SeriesRepository;
+use Illuminate\Support\Facades\Mail;
 
 class SeriesController extends Controller
 {
 
-    public function __construct(private SeriesRepository $repository) {
+    public function __construct(private SeriesRepository $repository)
+    {
         //esse construtor permite já usar o repositório em todo o controller usando o $this->repository
         $this->middleware(Autenticador::class)->except(['index']);
         //o except é para não precisar de autenticação para ver a lista de séries
@@ -47,13 +51,49 @@ class SeriesController extends Controller
         return view('series.create');
     }
 
-    //utiliza o request criado (e não o do laravel), pois permite reunir
+    //utiliza o request criado (e não o FormRequest do laravel), pois permite reunir
     //as validações em um só lugar
     public function store(SeriesFormRequest $request)
     {
 
-        $serie = $this->repository->add($request);
-        
+        $data = [
+            'name' => $request->name,
+            'seasonsQty' => $request->seasonsQty,
+            'episodesPerSeason' => $request->episodesPerSeason,
+        ];
+        $serie = $this->repository->add($data);
+
+        //O método "to" adiciona o destinatário informado à lista de destinatários do Mailable que é passado por parâmetro. 
+        //Sendo assim, a cada novo send nós não enviamos o e-mail apenas para o novo destinatário, 
+        //mas sim para todos os destinatários anteriores além do recém adicionado à lista existente.
+        /*$email = new SeriesCreated(
+            $serie->name,
+            $serie->id,
+            $request->seasonsQty,
+            $request->episodesPerSeason
+        );*/
+
+        //Envia e-mail para o usuário autenticado
+        //Mail::to($request->user())->send($email);
+
+        //Envia e-mail para todos os usuários
+        $users = User::all();
+
+        foreach ($users as $index => $user) {
+            $email = new SeriesCreated(
+                $serie->name,
+                $serie->id,
+                $request->seasonsQty,
+                $request->episodesPerSeason
+            );
+
+            //Para enviar de forma assíncrona, basta usar o método queue e alterar o QueueConnection no .env
+            //Mail::to($user)->send($email);
+            $when = now()->addSeconds($index *5);
+            //Mail::to($user)->queue($email);
+            Mail::to($user)->later($when, $email);
+        }
+
         //return redirect('/series');
         return to_route('series.index')->with('mensagem.sucesso', "Série {$serie->name} adicionada com sucesso");
     }

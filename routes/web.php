@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Mail\SeriesCreated;
 use Illuminate\Support\Facades\Route;
 
 /*

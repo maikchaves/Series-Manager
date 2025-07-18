@@ -5,7 +5,7 @@
 
         <div class="row mb-3">
             <div class="col-8">
-                <label for="nome" class="form-label">Nome:</label>
+                <label for="name" class="form-label">Nome:</label>
                 <input autofocus ="text" id="name" name="name" class="form-control"
                     @isset($name) value="{{old('name')}}" @endisset>
             </div>
